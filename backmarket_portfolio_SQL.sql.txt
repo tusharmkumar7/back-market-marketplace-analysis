@@ -1,0 +1,105 @@
+================================================================
+-- BACK MARKET PORTFOLIO — MASTER SQL FILE
+-- Business Data Analyst Portfolio Project
+-- Dataset: 60 Sellers | 600 Orders | Jan 2023 – Dec 2025
+-- ================================================================
+
+
+-- ================================================================
+-- SECTION 1: CREATE TABLES
+-- ================================================================
+
+CREATE TABLE sellers (
+    seller_id         VARCHAR(10)   PRIMARY KEY,
+    seller_name       VARCHAR(100)  NOT NULL,
+    seller_country    VARCHAR(50)   NOT NULL,
+    seller_city       VARCHAR(50),
+    seller_tier       VARCHAR(20),
+    avg_seller_rating DECIMAL(3,2),
+    joined_date       DATE
+);
+
+CREATE TABLE orders (
+    order_id          VARCHAR(15)   PRIMARY KEY,
+    order_date        DATE          NOT NULL,
+    customer_country  VARCHAR(50)   NOT NULL,
+    customer_city     VARCHAR(50),
+    product_category  VARCHAR(50),
+    product_name      VARCHAR(100),
+    refurb_grade      VARCHAR(10),
+    selling_price     DECIMAL(10,2),
+    original_price    DECIMAL(10,2),
+    quantity          INT,
+    order_status      VARCHAR(20),
+    return_reason     VARCHAR(100),
+    seller_id         VARCHAR(10)   REFERENCES sellers(seller_id)
+);
+
+
+-- ================================================================
+-- SECTION 2: 5 BUSINESS QUERIES
+-- ================================================================
+
+-- Q1: Which product categories generate the most revenue?
+SELECT
+    product_category,
+    COUNT(order_id)                AS total_orders,
+    SUM(selling_price * quantity)  AS total_revenue,
+    ROUND(AVG(selling_price), 2)   AS avg_order_value
+FROM orders
+WHERE order_status = 'Completed'
+GROUP BY product_category
+ORDER BY total_revenue DESC;
+
+
+-- Q2: Which customer countries drive the most orders and revenue?
+SELECT
+    customer_country,
+    COUNT(order_id)                AS total_orders,
+    SUM(selling_price * quantity)  AS total_revenue,
+    ROUND(AVG(selling_price), 2)   AS avg_order_value
+FROM orders
+WHERE order_status = 'Completed'
+GROUP BY customer_country
+ORDER BY total_orders DESC;
+
+
+-- Q3: Which sellers have the highest number of returned orders?
+SELECT
+    s.seller_id,
+    s.seller_name,
+    s.seller_country,
+    s.seller_tier,
+    s.avg_seller_rating,
+    COUNT(o.order_id)    AS total_returns
+FROM sellers s
+LEFT JOIN orders o ON s.seller_id = o.seller_id
+WHERE o.order_status = 'Returned'
+GROUP BY s.seller_id, s.seller_name, s.seller_country, s.seller_tier, s.avg_seller_rating
+ORDER BY total_returns DESC;
+
+
+-- Q4: Which product categories have the most returned orders?
+SELECT
+    product_category,
+    COUNT(order_id)      AS total_returns
+FROM orders
+WHERE order_status = 'Returned'
+GROUP BY product_category
+ORDER BY total_returns DESC;
+
+
+-- Q5: Which sellers had the highest completed order volume across 2023-2025?
+SELECT
+    s.seller_id,
+    s.seller_name,
+    s.seller_country,
+    s.seller_city,
+    s.seller_tier,
+    COUNT(o.order_id)              AS completed_orders
+FROM sellers s
+INNER JOIN orders o ON s.seller_id = o.seller_id
+WHERE o.order_status = 'Completed'
+  AND o.order_date BETWEEN '2023-01-01' AND '2025-12-31'
+GROUP BY s.seller_id, s.seller_name, s.seller_country, s.seller_city, s.seller_tier
+ORDER BY completed_orders DESC;
